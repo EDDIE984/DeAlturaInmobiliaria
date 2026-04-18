@@ -1,41 +1,25 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { User } from '@/types'
+import { Agent } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { UserPlus, Pencil, Trash2, Users } from 'lucide-react'
+import { UserPlus, Pencil, Trash2, Users, Snowflake } from 'lucide-react'
 
-const EMPTY_FORM = { email: '', password: '', name: '', role: 'user', is_active: true }
+const EMPTY_FORM = { name: '', email: '', phone: '', active: true, frio: false }
 
-export default function UsuariosPage() {
-  const [usuarios, setUsuarios] = useState<User[]>([])
+export default function AgentesPage() {
+  const [agentes, setAgentes] = useState<Agent[]>([])
   const [loading, setLoading] = useState(true)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -44,15 +28,15 @@ export default function UsuariosPage() {
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  async function fetchUsuarios() {
+  async function fetchAgentes() {
     setLoading(true)
-    const res = await fetch('/api/admin/usuarios')
+    const res = await fetch('/api/admin/agentes')
     const data = await res.json()
-    setUsuarios(data)
+    setAgentes(data)
     setLoading(false)
   }
 
-  useEffect(() => { fetchUsuarios() }, [])
+  useEffect(() => { fetchAgentes() }, [])
 
   function openCreate() {
     setForm({ ...EMPTY_FORM })
@@ -61,9 +45,9 @@ export default function UsuariosPage() {
     setShowModal(true)
   }
 
-  function openEdit(user: User) {
-    setForm({ email: user.email, password: '', name: user.name ?? '', role: user.role ?? 'user', is_active: user.is_active })
-    setEditingId(user.id)
+  function openEdit(agent: Agent) {
+    setForm({ name: agent.name, email: agent.email ?? '', phone: agent.phone ?? '', active: agent.active, frio: agent.frio ?? false })
+    setEditingId(agent.id)
     setError('')
     setShowModal(true)
   }
@@ -73,15 +57,13 @@ export default function UsuariosPage() {
     setSaving(true)
     setError('')
 
-    const url = editingId ? `/api/admin/usuarios/${editingId}` : '/api/admin/usuarios'
+    const url = editingId ? `/api/admin/agentes/${editingId}` : '/api/admin/agentes'
     const method = editingId ? 'PUT' : 'POST'
-    const body: Record<string, unknown> = { ...form }
-    if (editingId && !form.password) delete body.password
 
     const res = await fetch(url, {
       method,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+      body: JSON.stringify(form),
     })
 
     const data = await res.json()
@@ -93,41 +75,38 @@ export default function UsuariosPage() {
     }
 
     setShowModal(false)
-    fetchUsuarios()
+    fetchAgentes()
   }
 
   async function handleDelete(id: string) {
-    await fetch(`/api/admin/usuarios/${id}`, { method: 'DELETE' })
+    await fetch(`/api/admin/agentes/${id}`, { method: 'DELETE' })
     setDeleteConfirm(null)
-    fetchUsuarios()
+    fetchAgentes()
   }
 
-  const activeCount = usuarios.filter((u) => u.is_active).length
+  const activeCount = agentes.filter((a) => a.active).length
+  const frioCount = agentes.filter((a) => a.frio).length
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Usuarios</h2>
-          <p className="text-muted-foreground text-sm">Gestiona los usuarios del sistema</p>
+          <h2 className="text-2xl font-bold tracking-tight">Agentes</h2>
+          <p className="text-muted-foreground text-sm">Gestiona los agentes de ventas</p>
         </div>
         <Button onClick={openCreate}>
           <UserPlus className="h-4 w-4 mr-2" />
-          Nuevo Usuario
+          Nuevo Agente
         </Button>
       </div>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total usuarios</CardDescription>
-            <CardTitle className="text-3xl">{usuarios.length}</CardTitle>
+            <CardDescription>Total agentes</CardDescription>
+            <CardTitle className="text-3xl">{agentes.length}</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardContent>
+          <CardContent><Users className="h-4 w-4 text-muted-foreground" /></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
@@ -140,67 +119,70 @@ export default function UsuariosPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Inactivos</CardDescription>
-            <CardTitle className="text-3xl text-muted-foreground">{usuarios.length - activeCount}</CardTitle>
+            <CardDescription>Leads fríos</CardDescription>
+            <CardTitle className="text-3xl text-blue-500">{frioCount}</CardTitle>
           </CardHeader>
           <CardContent>
-            <Badge variant="outline">Inactivos</Badge>
+            <Snowflake className="h-4 w-4 text-blue-400" />
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabla */}
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="text-center py-16 text-muted-foreground text-sm">Cargando usuarios...</div>
+            <div className="text-center py-16 text-muted-foreground text-sm">Cargando agentes...</div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   <TableHead>Correo</TableHead>
-                  <TableHead>Rol</TableHead>
+                  <TableHead>Teléfono</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead>Frío</TableHead>
                   <TableHead>Creado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {usuarios.length === 0 ? (
+                {agentes.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
-                      No hay usuarios registrados
+                    <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
+                      No hay agentes registrados
                     </TableCell>
                   </TableRow>
                 ) : (
-                  usuarios.map((u) => (
-                    <TableRow key={u.id}>
-                      <TableCell className="font-medium">{u.name ?? '—'}</TableCell>
-                      <TableCell className="text-muted-foreground">{u.email}</TableCell>
+                  agentes.map((a) => (
+                    <TableRow key={a.id}>
+                      <TableCell className="font-medium">{a.name}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.email ?? '—'}</TableCell>
+                      <TableCell className="text-muted-foreground">{a.phone ?? '—'}</TableCell>
                       <TableCell>
-                        <Badge variant={u.role === 'admin' ? 'default' : 'secondary'}>
-                          {u.role === 'admin' ? 'Admin' : 'Usuario'}
+                        <Badge variant={a.active ? 'outline' : 'destructive'}
+                          className={a.active ? 'text-green-600 border-green-300' : ''}>
+                          {a.active ? 'Activo' : 'Inactivo'}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={u.is_active ? 'outline' : 'destructive'}
-                          className={u.is_active ? 'text-green-600 border-green-300' : ''}>
-                          {u.is_active ? 'Activo' : 'Inactivo'}
-                        </Badge>
+                        {a.frio ? (
+                          <Snowflake className="h-4 w-4 text-blue-400" />
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
-                        {new Date(u.created_at).toLocaleDateString('es-ES')}
+                        {new Date(a.created_at).toLocaleDateString('es-ES')}
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(u)}>
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(a)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => setDeleteConfirm(u.id)}
+                            onClick={() => setDeleteConfirm(a.id)}
                             className="text-muted-foreground hover:text-destructive"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -216,65 +198,58 @@ export default function UsuariosPage() {
         </CardContent>
       </Card>
 
-      {/* Modal crear/editar */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Editar Usuario' : 'Nuevo Usuario'}</DialogTitle>
+            <DialogTitle>{editingId ? 'Editar Agente' : 'Nuevo Agente'}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
+              <Label htmlFor="name">Nombre *</Label>
               <Input
                 id="name"
                 placeholder="Nombre completo"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Correo *</Label>
+              <Label htmlFor="email">Correo</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="correo@ejemplo.com"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">
-                Contraseña {editingId && <span className="text-muted-foreground font-normal text-xs">(dejar vacío para no cambiar)</span>}
-              </Label>
+              <Label htmlFor="phone">Teléfono</Label>
               <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={form.password}
-                onChange={(e) => setForm({ ...form, password: e.target.value })}
-                required={!editingId}
+                id="phone"
+                placeholder="+593 99 000 0000"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>Rol *</Label>
-              <Select value={form.role ?? 'user'} onValueChange={(val) => setForm({ ...form, role: val ?? 'user' })}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="user">Usuario</SelectItem>
-                  <SelectItem value="admin">Administrador</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="is_active"
-                checked={form.is_active}
-                onCheckedChange={(checked) => setForm({ ...form, is_active: !!checked })}
-              />
-              <Label htmlFor="is_active" className="cursor-pointer">Usuario activo</Label>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="active"
+                  checked={form.active}
+                  onCheckedChange={(checked) => setForm({ ...form, active: !!checked })}
+                />
+                <Label htmlFor="active" className="cursor-pointer">Activo</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="frio"
+                  checked={form.frio}
+                  onCheckedChange={(checked) => setForm({ ...form, frio: !!checked })}
+                />
+                <Label htmlFor="frio" className="cursor-pointer">Lead frío</Label>
+              </div>
             </div>
 
             {error && (
@@ -282,29 +257,22 @@ export default function UsuariosPage() {
             )}
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving ? 'Guardando...' : 'Guardar'}
-              </Button>
+              <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancelar</Button>
+              <Button type="submit" disabled={saving}>{saving ? 'Guardando...' : 'Guardar'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Modal confirmar eliminación */}
       <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>¿Eliminar usuario?</DialogTitle>
+            <DialogTitle>¿Eliminar agente?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">Esta acción no se puede deshacer.</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>
-              Eliminar
-            </Button>
+            <Button variant="destructive" onClick={() => deleteConfirm && handleDelete(deleteConfirm)}>Eliminar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

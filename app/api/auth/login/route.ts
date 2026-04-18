@@ -29,16 +29,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 })
     }
 
-    const passwordMatch = await bcrypt.compare(password, user.password_hash)
+    let passwordMatch = false
+
+    if (user.password_hash.startsWith('$2b$') || user.password_hash.startsWith('$2a$')) {
+      passwordMatch = await bcrypt.compare(password, user.password_hash)
+    } else {
+      // plain-text password — compare directly then migrate to hash
+      passwordMatch = password === user.password_hash
+      if (passwordMatch) {
+        const newHash = await bcrypt.hash(password, 12)
+        await supabaseAdmin
+          .from('users')
+          .update({ password_hash: newHash })
+          .eq('id', user.id)
+      }
+    }
+
     if (!passwordMatch) {
       return NextResponse.json({ error: 'Credenciales incorrectas' }, { status: 401 })
     }
+
+    const { data: agent } = await supabaseAdmin
+      .from('agents')
+      .select('phone')
+      .eq('email', user.email.toLowerCase().trim())
+      .maybeSingle()
 
     const token = await createSession({
       id: user.id,
       email: user.email,
       name: user.name ?? '',
-      role: user.role ?? 'user',
+      role: user.role ?? 'usuario',
+      phone: agent?.phone ?? undefined,
     })
 
     const response = NextResponse.json({ role: user.role }, { status: 200 })

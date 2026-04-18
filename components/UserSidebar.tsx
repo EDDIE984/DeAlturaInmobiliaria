@@ -3,18 +3,14 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { Separator } from '@/components/ui/separator'
-import { Users, LogOut, UserCheck, Building2, Sparkles, MapPin, LayoutGrid } from 'lucide-react'
+import { LayoutDashboard, Users2, LogOut } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
-  { label: 'Agentes', href: '/admin/agentes', icon: UserCheck },
-  { label: 'Empresa', href: '/admin/empresa', icon: Building2 },
-  { label: 'Amenidades', href: '/admin/amenidades', icon: Sparkles },
-  { label: 'Lotes', href: '/admin/lotes', icon: MapPin },
-  { label: 'Zonas', href: '/admin/zonas', icon: LayoutGrid },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Leads', href: '/dashboard/leads', icon: Users2 },
 ]
 
-export default function AdminSidebar() {
+export default function UserSidebar() {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -27,14 +23,16 @@ export default function AdminSidebar() {
     <aside className="w-60 bg-white border-r flex flex-col h-screen sticky top-0">
       <div className="px-6 py-5">
         <h1 className="font-bold text-lg text-gray-900">De Altura</h1>
-        <span className="text-xs text-gray-400">Panel Administrativo</span>
+        <span className="text-xs text-gray-400">Portal Agente</span>
       </div>
 
       <Separator />
 
       <nav className="flex-1 px-3 py-4 space-y-1">
         {NAV_ITEMS.map(({ label, href, icon: Icon }) => {
-          const active = pathname.startsWith(href)
+          const active = href === '/dashboard'
+            ? pathname === '/dashboard'
+            : pathname.startsWith(href)
           return (
             <Link
               key={href}

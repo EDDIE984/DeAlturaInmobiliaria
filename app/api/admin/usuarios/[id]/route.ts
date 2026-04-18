@@ -17,6 +17,20 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params
   const { email, password, name, role, is_active } = await request.json()
 
+  const { data: existingUser, error: existingUserError } = await supabaseAdmin
+    .from('users')
+    .select('id, email, role')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (existingUserError) {
+    return NextResponse.json({ error: existingUserError.message }, { status: 500 })
+  }
+
+  if (!existingUser) {
+    return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
+  }
+
   const updates: Record<string, unknown> = {}
   if (email) updates.email = email.toLowerCase().trim()
   if (name !== undefined) updates.name = name
@@ -32,6 +46,34 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  const oldEmail = existingUser.email?.toLowerCase().trim() ?? ''
+  const newEmail = data.email?.toLowerCase().trim() ?? oldEmail
+  const resultingRole = (data.role ?? existingUser.role ?? 'user').toLowerCase()
+
+  const shouldSyncAgent = resultingRole === 'user' && (oldEmail !== newEmail || name !== undefined || is_active !== undefined)
+
+  if (shouldSyncAgent) {
+    let query = supabaseAdmin
+      .from('agents')
+      .update({
+        email: newEmail,
+        name: data.name ?? null,
+        active: data.is_active,
+      })
+
+    if (oldEmail && oldEmail !== newEmail) {
+      query = query.or(`email.eq.${oldEmail},email.eq.${newEmail}`)
+    } else {
+      query = query.eq('email', newEmail)
+    }
+
+    const { error: syncAgentError } = await query
+    if (syncAgentError) {
+      return NextResponse.json({ error: syncAgentError.message }, { status: 500 })
+    }
+  }
+
   return NextResponse.json(data)
 }
 
