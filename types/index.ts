@@ -74,3 +74,13 @@ export interface Zone {
   monthly_payment: number | null
   lot_id: string | null
 }
+
+export interface LeadSeguimiento {
+  id: string
+  lead_id: string
+  tipo: 'CONTACTO' | 'SEGUIMIENTO'
+  fecha: string
+  observaciones: string | null
+  agent_id: string
+  created_at: string
+}

@@ -7,9 +7,9 @@ import { Users, LogOut, UserCheck, Building2, Sparkles, MapPin, LayoutGrid, Mess
 
 const NAV_ITEMS = [
   { label: 'Dashboard', href: '/admin/dashboard', icon: BarChart3 },
-  { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
-  { label: 'Agentes', href: '/admin/agentes', icon: UserCheck },
   { label: 'Leads', href: '/admin/leads', icon: MessageSquareMore },
+  { label: 'Agentes', href: '/admin/agentes', icon: UserCheck },
+  { label: 'Usuarios', href: '/admin/usuarios', icon: Users },
   { label: 'Empresa', href: '/admin/empresa', icon: Building2 },
   { label: 'Amenidades', href: '/admin/amenidades', icon: Sparkles },
   { label: 'Lotes', href: '/admin/lotes', icon: MapPin },

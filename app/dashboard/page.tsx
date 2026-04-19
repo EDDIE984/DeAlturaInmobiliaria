@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Users2, TrendingUp, Clock, ArrowRight } from 'lucide-react'
+import { Users2, TrendingUp, Clock, ArrowRight, CheckCircle2, XCircle, AlertCircle, PhoneCall, CalendarClock, Percent } from 'lucide-react'
 
 interface Lead {
   id: string
@@ -17,6 +16,16 @@ interface Lead {
   classification: string | null
   source: string | null
   created_at: string
+}
+
+interface AgentStats {
+  total_leads: number
+  ventas: number
+  no_ventas: number
+  sin_gestionar: number
+  tasa_conversion: number
+  contactos_periodo: number
+  seguimientos_pendientes: number
 }
 
 const CLASSIFICATION_COLORS: Record<string, string> = {
@@ -39,15 +48,37 @@ function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
+function toDateInput(iso: string) {
+  return iso.slice(0, 10)
+}
+
+function startOfMonth() {
+  const now = new Date()
+  return new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+}
+
 export default function DashboardPage() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
+  const [stats, setStats] = useState<AgentStats | null>(null)
+  const [statsLoading, setStatsLoading] = useState(true)
+  const [from, setFrom] = useState(toDateInput(startOfMonth()))
+  const [to, setTo] = useState(toDateInput(new Date().toISOString()))
 
   useEffect(() => {
     fetch('/api/dashboard/leads')
       .then((r) => r.json())
       .then((data) => { setLeads(Array.isArray(data) ? data : []); setLoading(false) })
   }, [])
+
+  useEffect(() => {
+    setStatsLoading(true)
+    const fromISO = new Date(from).toISOString()
+    const toISO = new Date(to + 'T23:59:59').toISOString()
+    fetch(`/api/dashboard/stats?from=${fromISO}&to=${toISO}`)
+      .then((r) => r.json())
+      .then((data) => { setStats(data?.error ? null : data); setStatsLoading(false) })
+  }, [from, to])
 
   const byClassification = leads.reduce<Record<string, number>>((acc, l) => {
     const key = l.classification ?? 'Sin clasificar'
@@ -68,6 +99,7 @@ export default function DashboardPage() {
         <div className="text-center py-16 text-muted-foreground text-sm">Cargando...</div>
       ) : (
         <>
+          {/* Clasificación chatbot — se mantiene */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card>
               <CardHeader className="pb-2">
@@ -96,6 +128,86 @@ export default function DashboardPage() {
             })}
           </div>
 
+          {/* Gestión del agente */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <h3 className="font-semibold text-base">Gestión del agente</h3>
+                <p className="text-sm text-muted-foreground">Resultados y actividad comercial</p>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-muted-foreground">Desde</label>
+                  <input
+                    type="date"
+                    value={from}
+                    onChange={(e) => setFrom(e.target.value)}
+                    className="border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <label className="text-xs text-muted-foreground">Hasta</label>
+                  <input
+                    type="date"
+                    value={to}
+                    onChange={(e) => setTo(e.target.value)}
+                    className="border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {statsLoading ? (
+              <div className="text-center py-8 text-muted-foreground text-sm">Cargando estadísticas...</div>
+            ) : stats ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Ventas</CardDescription>
+                    <CardTitle className="text-3xl text-green-600">{stats.ventas}</CardTitle>
+                  </CardHeader>
+                  <CardContent><CheckCircle2 className="h-4 w-4 text-green-500" /></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>No ventas</CardDescription>
+                    <CardTitle className="text-3xl text-red-600">{stats.no_ventas}</CardTitle>
+                  </CardHeader>
+                  <CardContent><XCircle className="h-4 w-4 text-red-500" /></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Sin gestionar</CardDescription>
+                    <CardTitle className="text-3xl text-gray-500">{stats.sin_gestionar}</CardTitle>
+                  </CardHeader>
+                  <CardContent><AlertCircle className="h-4 w-4 text-muted-foreground" /></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Conversión</CardDescription>
+                    <CardTitle className="text-3xl text-blue-600">{stats.tasa_conversion}%</CardTitle>
+                  </CardHeader>
+                  <CardContent><Percent className="h-4 w-4 text-blue-400" /></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Contactos</CardDescription>
+                    <CardTitle className="text-3xl text-yellow-600">{stats.contactos_periodo}</CardTitle>
+                  </CardHeader>
+                  <CardContent><PhoneCall className="h-4 w-4 text-yellow-500" /></CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardDescription>Seguimientos pendientes</CardDescription>
+                    <CardTitle className="text-3xl text-orange-600">{stats.seguimientos_pendientes}</CardTitle>
+                  </CardHeader>
+                  <CardContent><CalendarClock className="h-4 w-4 text-orange-400" /></CardContent>
+                </Card>
+              </div>
+            ) : null}
+          </div>
+
+          {/* Leads recientes */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
               <div>

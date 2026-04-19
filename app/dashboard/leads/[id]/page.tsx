@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, MessageSquare, User, ChevronDown, ChevronUp, Bot } from 'lucide-react'
+import { ArrowLeft, MessageSquare, User, ChevronDown, ChevronUp, Bot, ClipboardList } from 'lucide-react'
 
 interface Lead {
   id: string
@@ -18,6 +18,7 @@ interface Lead {
   source: string | null
   notes: string | null
   classification: string | null
+  resultado: string | null
   created_at: string
   remotejid: string | null
   id_conversations: string | null
@@ -44,16 +45,36 @@ interface ChatMessage {
   created_at: string
 }
 
+interface Seguimiento {
+  id: string
+  tipo: 'CONTACTO' | 'SEGUIMIENTO'
+  fecha: string
+  observaciones: string | null
+  created_at: string
+}
+
 const CLASSIFICATION_COLORS: Record<string, string> = {
   caliente: 'bg-red-100 text-red-700 border-red-200',
   tibio: 'bg-orange-100 text-orange-700 border-orange-200',
   frio: 'bg-blue-100 text-blue-700 border-blue-200',
 }
 
+const RESULTADO_COLORS: Record<string, string> = {
+  VENTA: 'bg-green-100 text-green-700 border-green-200',
+  NO_VENTA: 'bg-red-100 text-red-700 border-red-200',
+}
+
 function classificationBadge(v: string | null) {
   const key = (v ?? '').toLowerCase()
   const cls = CLASSIFICATION_COLORS[key] ?? 'bg-gray-100 text-gray-600 border-gray-200'
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>{v ?? '—'}</span>
+}
+
+function resultadoBadge(resultado: string | null) {
+  if (!resultado) return null
+  const cls = RESULTADO_COLORS[resultado] ?? 'bg-gray-100 text-gray-600 border-gray-200'
+  const label = resultado === 'VENTA' ? 'Venta' : 'No venta'
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${cls}`}>{label}</span>
 }
 
 function formatDate(iso: string | null) {
@@ -169,6 +190,29 @@ function ConversationCard({ conv, leadId }: { conv: Conversation; leadId: string
   )
 }
 
+function SeguimientoItem({ seg }: { seg: Seguimiento }) {
+  const isContacto = seg.tipo === 'CONTACTO'
+  return (
+    <div className="flex gap-3">
+      <div className="flex flex-col items-center">
+        <div className={`w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0 ${isContacto ? 'bg-blue-500' : 'bg-orange-500'}`} />
+        <div className="w-px flex-1 bg-border mt-1" />
+      </div>
+      <div className="pb-4 flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap mb-1">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${isContacto ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-orange-100 text-orange-700 border-orange-200'}`}>
+            {isContacto ? 'Contacto' : 'Seguimiento'}
+          </span>
+          <span className="text-xs text-muted-foreground">{formatDate(seg.fecha)}</span>
+        </div>
+        {seg.observaciones && (
+          <p className="text-sm text-gray-700 whitespace-pre-wrap">{seg.observaciones}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function LeadDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -176,15 +220,18 @@ export default function LeadDetailPage() {
 
   const [lead, setLead] = useState<Lead | null>(null)
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [seguimientos, setSeguimientos] = useState<Seguimiento[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([
       fetch(`/api/dashboard/leads/${id}`).then((r) => r.json()),
       fetch(`/api/dashboard/leads/${id}/conversations`).then((r) => r.json()),
-    ]).then(([leadData, convData]) => {
+      fetch(`/api/dashboard/leads/${id}/seguimientos`).then((r) => r.json()),
+    ]).then(([leadData, convData, segData]) => {
       setLead(leadData?.error ? null : leadData)
       setConversations(Array.isArray(convData) ? convData : [])
+      setSeguimientos(Array.isArray(segData) ? segData : [])
       setLoading(false)
     })
   }, [id])
@@ -204,9 +251,9 @@ export default function LeadDetailPage() {
     <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => router.back()}><ArrowLeft className="h-4 w-4 mr-1" /> Volver</Button>
-        <div>
+        <div className="flex items-center gap-2 flex-wrap">
           <h2 className="text-2xl font-bold tracking-tight">{lead.name ?? 'Sin nombre'}</h2>
-          <p className="text-muted-foreground text-sm">Detalle del lead</p>
+          {resultadoBadge(lead.resultado)}
         </div>
       </div>
 
@@ -218,7 +265,7 @@ export default function LeadDetailPage() {
           <Field label="Nombre" value={lead.name} />
           <Field label="Teléfono" value={lead.phone} />
           <Field label="Email" value={lead.email} />
-          <div className="space-y-0.5"><p className="text-xs text-muted-foreground">Clasificación</p><div>{classificationBadge(lead.classification)}</div></div>
+          <div className="space-y-0.5"><p className="text-xs text-muted-foreground">Clasificación chatbot</p><div>{classificationBadge(lead.classification)}</div></div>
           <Field label="Fuente" value={lead.source} />
           <Field label="Zona de interés" value={lead.zone_interest} />
           <BoolField label="Puede pagar entrada" value={lead.can_pay_entry} />
@@ -227,6 +274,25 @@ export default function LeadDetailPage() {
           <Field label="Notas" value={lead.notes} />
           <Field label="Creado" value={formatDate(lead.created_at)} />
           <Field label="Modificado" value={formatDate(lead.modificacion_at)} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <ClipboardList className="h-4 w-4" /> Historial de gestión ({seguimientos.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {seguimientos.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Sin gestiones registradas</p>
+          ) : (
+            <div className="mt-1">
+              {seguimientos.map((seg) => (
+                <SeguimientoItem key={seg.id} seg={seg} />
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
 
