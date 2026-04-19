@@ -1,5 +1,5 @@
 'use client'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Cell, ResponsiveContainer, LabelList } from 'recharts'
 
 interface Props {
   data: { resultado: string; count: number }[]
@@ -24,25 +24,18 @@ export default function ResultsPie({ data }: Props) {
   const display = data.map((d) => ({ ...d, label: LABELS[d.resultado] ?? d.resultado }))
   return (
     <ResponsiveContainer width="100%" height={220}>
-      <PieChart>
-        <Pie
-          data={display}
-          dataKey="count"
-          nameKey="label"
-          cx="50%"
-          cy="50%"
-          outerRadius={75}
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          label={({ label, percent }: any) =>
-            `${label} ${(percent * 100).toFixed(0)}%`
-          }
-        >
+      <BarChart data={display} margin={{ top: 16, right: 8, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+        <XAxis dataKey="label" tick={{ fontSize: 12 }} />
+        <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+        <Tooltip formatter={(v: any) => [v, 'Leads']} />
+        <Bar dataKey="count" radius={[4, 4, 0, 0]} name="Leads">
+          <LabelList dataKey="count" position="top" style={{ fontSize: 12, fontWeight: 600 }} />
           {display.map((entry) => (
             <Cell key={entry.resultado} fill={COLORS[entry.resultado] ?? '#6b7280'} />
           ))}
-        </Pie>
-        <Tooltip formatter={(v: any) => [v, 'Leads']} />
-      </PieChart>
+        </Bar>
+      </BarChart>
     </ResponsiveContainer>
   )
 }
