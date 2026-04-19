@@ -26,7 +26,8 @@ export default function ClassificationPie({ data }: Props) {
           cx="50%"
           cy="50%"
           outerRadius={75}
-          label={({ clasificacion, percent }: { clasificacion: string; percent: number }) =>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          label={({ clasificacion, percent }: any) =>
             `${clasificacion} ${(percent * 100).toFixed(0)}%`
           }
         >
@@ -34,7 +35,7 @@ export default function ClassificationPie({ data }: Props) {
             <Cell key={entry.clasificacion} fill={COLORS[entry.clasificacion] ?? '#6b7280'} />
           ))}
         </Pie>
-        <Tooltip formatter={(v: number) => [v, 'Leads']} />
+        <Tooltip formatter={(v: any) => [v, 'Leads']} />
       </PieChart>
     </ResponsiveContainer>
   )

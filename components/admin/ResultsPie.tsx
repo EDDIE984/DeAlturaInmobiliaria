@@ -32,7 +32,8 @@ export default function ResultsPie({ data }: Props) {
           cx="50%"
           cy="50%"
           outerRadius={75}
-          label={({ label, percent }: { label: string; percent: number }) =>
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          label={({ label, percent }: any) =>
             `${label} ${(percent * 100).toFixed(0)}%`
           }
         >
@@ -40,7 +41,7 @@ export default function ResultsPie({ data }: Props) {
             <Cell key={entry.resultado} fill={COLORS[entry.resultado] ?? '#6b7280'} />
           ))}
         </Pie>
-        <Tooltip formatter={(v: number) => [v, 'Leads']} />
+        <Tooltip formatter={(v: any) => [v, 'Leads']} />
       </PieChart>
     </ResponsiveContainer>
   )

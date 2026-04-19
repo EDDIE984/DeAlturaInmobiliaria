@@ -15,7 +15,7 @@ export default function LeadsLineChart({ data }: Props) {
         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
         <XAxis dataKey="fecha" tickFormatter={(d: string) => d.slice(5)} tick={{ fontSize: 11 }} />
         <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
-        <Tooltip labelFormatter={(l: string) => `Fecha: ${l}`} formatter={(v: number) => [v, 'Leads']} />
+        <Tooltip labelFormatter={(l: any) => `Fecha: ${l}`} formatter={(v: any) => [v, 'Leads']} />
         <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} dot={false} />
       </LineChart>
     </ResponsiveContainer>
