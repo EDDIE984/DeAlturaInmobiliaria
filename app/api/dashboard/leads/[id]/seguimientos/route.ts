@@ -7,6 +7,17 @@ async function getAgentId(email: string): Promise<string | null> {
   return data?.id ?? null
 }
 
+function isMissingSeguimientosTable(error: { code?: string; message?: string }) {
+  return error.code === '42P01' || error.message?.includes('lead_seguimientos')
+}
+
+function missingSeguimientosTableResponse() {
+  return NextResponse.json(
+    { error: 'Falta crear la tabla lead_seguimientos en Supabase. Ejecuta la migración incluida en supabase/migrations.' },
+    { status: 500 }
+  )
+}
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -30,7 +41,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     .eq('lead_id', id)
     .order('fecha', { ascending: false })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    if (isMissingSeguimientosTable(error)) return missingSeguimientosTableResponse()
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json(data ?? [])
 }
 
@@ -58,16 +72,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: 'tipo y fecha son requeridos' }, { status: 400 })
   }
 
+  if (tipo !== 'CONTACTO' && tipo !== 'SEGUIMIENTO') {
+    return NextResponse.json({ error: 'Tipo de gestión inválido' }, { status: 400 })
+  }
+
+  const fechaGestion = new Date(fecha)
+  if (Number.isNaN(fechaGestion.getTime())) {
+    return NextResponse.json({ error: 'Fecha inválida' }, { status: 400 })
+  }
+
   const { data, error } = await supabaseAdmin
     .from('lead_seguimientos')
-    .insert({ lead_id: id, tipo, fecha, observaciones: observaciones ?? null, agent_id: agentId })
+    .insert({ lead_id: id, tipo, fecha: fechaGestion.toISOString(), observaciones: observaciones ?? null, agent_id: agentId })
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    if (isMissingSeguimientosTable(error)) return missingSeguimientosTableResponse()
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
 
   if (resultado === 'VENTA' || resultado === 'NO_VENTA') {
-    await supabaseAdmin.from('leads').update({ resultado }).eq('id', id)
+    const { error: updateError } = await supabaseAdmin.from('leads').update({ resultado }).eq('id', id)
+    if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
   }
 
   return NextResponse.json(data, { status: 201 })
