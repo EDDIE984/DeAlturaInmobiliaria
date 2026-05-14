@@ -27,9 +27,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
   const { data, error } = await supabaseAdmin
     .from('conversations')
-    .select('*')
+    .select('id, status, classification, flow_state, created_at')
     .eq('phone', lead.remotejid)
-    .order('created_at', { ascending: true })
+    .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])

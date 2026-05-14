@@ -16,7 +16,7 @@ export async function GET(
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
-  const { id, convId } = await params
+  const { id } = await params
 
   const { data: lead, error: leadError } = await supabaseAdmin
     .from('leads')
@@ -28,23 +28,10 @@ export async function GET(
   if (!lead) return NextResponse.json({ error: 'Lead no encontrado' }, { status: 404 })
   if (!lead.remotejid) return NextResponse.json([])
 
-  const { data: conversation, error: conversationError } = await supabaseAdmin
-    .from('conversations')
-    .select('id, phone')
-    .eq('id', convId)
-    .maybeSingle()
-
-  if (conversationError) return NextResponse.json({ error: conversationError.message }, { status: 500 })
-  if (!conversation) return NextResponse.json({ error: 'Conversación no encontrada' }, { status: 404 })
-
-  if (conversation.phone !== lead.remotejid) {
-    return NextResponse.json({ error: 'La conversación no pertenece a este lead' }, { status: 400 })
-  }
-
   const { data, error } = await supabaseAdmin
     .from('conversations_detail')
     .select('id, humano, chatbot, created_at')
-    .eq('remotejid', conversation.phone)
+    .eq('remotejid', lead.remotejid)
     .order('created_at', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
